@@ -150,6 +150,13 @@ All five should exit cleanly (exit code 0).
 - New **output-side** patterns: the corpus was input-only until 0.4.0, and the
   output channel (LLM05) is where a model turns a harmless answer into a
   stored XSS or a hostile link.
+- New **carrier channels**: a codepoint range that can carry a payload without
+  rendering anything (see `wordlists/evasion/steganographic-channels.txt`). If
+  you find one, add it to that file **and** to `CARRIER_CHANNELS` in
+  `promptwl/normalize.py`, so the detector knows about it too.
+- New **reliability probes**: the `misinformation/` category (LLM09) takes
+  questions with no determinate answer, where the failure is confident
+  fabrication rather than refusal.
 - **Citations** — a link to where a pattern is documented in public research or
   OWASP makes the contribution much easier to review.
 

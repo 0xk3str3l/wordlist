@@ -58,6 +58,7 @@ are produced. The journal follows a strict format:
 | 0.3.1 | 694 | Unicode confusables, encoding chains, expanded glitch list |
 | 0.3.2 | 694 | PyPI packaging — `pip install promptwl` |
 | 0.4.0 | 835 | Scanner API, metadata sidecars, chat templates, output handling (LLM05), tool-argument injection, verified claims |
+| 0.5.0 | 929 | Carrier detector (ST3GG), anti-classifier paraphrase, token-level substitution, known-unknown probes (LLM09), punycode/IDN |
 
 ## License
 

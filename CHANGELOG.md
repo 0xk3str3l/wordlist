@@ -5,6 +5,45 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.5.0] — 2026-11-21
+
+### Added
+- **Carrier detector** — `promptwl.carriers(text)` reports the steganographic
+  channel a payload is riding in: zero-width, bidi override, Unicode Tags,
+  variation selectors, Hangul fillers, invisible ink, and (with
+  `strict=True`) Braille dot patterns, look-alike spaces and emoji modifiers.
+  `strip_invisible()` now removes the new invisible carriers too, and
+  `normalize()` folds them before matching.
+- **New corpus classes** (survey round 3 — journal F-013):
+  - `wordlists/evasion/steganographic-channels.txt` — the carrier catalog:
+    variation selectors, Hangul fillers, combining marks, Braille patterns,
+    emoji modifiers, plus the IDN/punycode homograph domain class.
+  - `wordlists/evasion/classifier-evasion-paraphrase.txt` — requests to
+    reword a payload so an automated classifier (not a human) stops detecting
+    it. Meaning preserved, surface changed.
+  - `wordlists/evasion/token-level-substitution.txt` — phonetic respelling,
+    invented words, emoji letters, affix padding, letter shuffling.
+  - `wordlists/misinformation/unknowable-probes.txt` — **new `misinformation/`
+    category (LLM09)**: known-unknown probes, where the failure mode is
+    confident fabrication rather than refusal.
+- **Punycode / IDN homograph** entries in `agents/tool-argument-injection` —
+  a URL that renders as one domain and resolves to another.
+- **Transform taxonomy** expanded in `tokens/encoding-chains.txt` (base32,
+  base58, base85, ascii85, punycode, pig-latin, zalgo, upside-down, braille,
+  respell, emoji-substitution, spelling-alphabet, affix-padding,
+  letter-shuffle).
+- `examples/scan_demo.py` gained a **carriers** section — the payload with no
+  words in it.
+- `tests/test_carriers.py` — 15 new tests for carrier detection and the new
+  corpus classes (47 total).
+
+### Changed
+- Corpus: 835 → **929 phrases** (919 unique), 9 → **10 categories**, 41 files.
+- `promptwl.scan()` keeps matching across a carrier (a Hangul filler inside
+  "ignore all previous instructions" no longer hides it).
+
+---
+
 ## [0.4.0] — 2026-11-21
 
 ### Added

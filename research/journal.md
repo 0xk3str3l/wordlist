@@ -35,11 +35,108 @@ Newest entries on top. Format: `ID · date · title · severity · status`.
 | Chat-template forgery | LLM01 | Forge the control markers the runtime uses for roles. |
 | Tool-argument injection | LLM01 / LLM06 | Steer a legitimate tool call's parameters from untrusted content. |
 | Output handling | LLM05 | Model output breaks the renderer that displays it. |
+| Steganographic carrier | LLM01 | The payload rides in the codepoints, not the words. |
+| Classifier-evasion paraphrase | LLM01 | Reword a payload so the classifier — not the reader — misses it. |
+| Token-level substitution | LLM01 | Respell, invent, shuffle: same meaning, different tokens. |
+| Known unknowns | LLM09 | No determinate answer — the failure is confident fabrication. |
 | Tokenizer anomalies | — | Rare "glitch" tokens cause undefined behavior. |
 
 ---
 
 ## Findings
+
+### F-013 · 2026-11-21 · Round-3 survey: carriers, anti-classifier laundering, and the known-unknown probe · High · confirmed
+
+**Thesis.** Round 2 (F-012) read the *jailbreak* collections. Round 3 read the
+**adjacent** tools in the same ecosystem — the steganography suite (`ST3GG`),
+the text-mutation engine (`P4RS3LT0NGV3`), the "known unknowns" benchmark
+(`V3R1T4S`) and the automated defense-tester (`AutoRedTeam`) — and found three
+attack classes promptwl still did not model, plus one corpus-shaped question
+we had been avoiding.
+
+**Gap 1 — the payload with no words.** F-006 modelled ASCII smuggling as
+*zero-width codepoints and Unicode Tags*. The carrier idea generalizes: a
+payload can ride in a **variation selector** (U+FE00–FE0F, U+E0100–E01EF),
+a **Hangul filler** (U+3164, U+115F–U+1160), a **combining mark**, a
+**Braille dot pattern** (a 6-bit carrier that renders as legitimate braille),
+a **look-alike space** (U+2000–U+200A, U+202F, U+205F, U+3000), an **emoji
+skin-tone modifier**, or an **IDN/punycode homograph domain**. Every one of
+these renders as ordinary text; the payload is in the structure.
+**Added.** `wordlists/evasion/steganographic-channels.txt` and
+`promptwl.carriers(text)` — the detector, with `strict=True` for the visible-
+but-unusual channels (legitimate text contains Braille and emoji modifiers, so
+flagging those by default would drown the signal).
+**Measured.** `strip_invisible()` and `normalize()` now remove/fold the new
+invisible carriers, so `promptwl.scan()` still matches an attack with a
+Hangul filler in the middle of the phrase.
+**Defense.** Detect the carrier, not the word. Scan on ingestion, sanitize on
+egress, decode and review anything that carries.
+
+**Gap 2 — laundering for the classifier, not the reader.** The mutation
+toolkit's most interesting feature is not an encoding but an *anti-classifier*
+routine: keep the meaning exactly, change the surface, and the automated
+filter that was supposed to stop it no longer sees it. Two classes:
+**classifier-evasion paraphrase** ("reword this so no filter catches it") and
+**token-level substitution** (spell it phonetically, invent a word for each
+term, swap letters for emoji, pad every word with affixes).
+**Added.** `wordlists/evasion/classifier-evasion-paraphrase.txt` and
+`wordlists/evasion/token-level-substitution.txt`.
+**Defense.** Classify on semantics *with paraphrase augmentation*; and treat
+the request to launder as the signal — "reword this so the filter misses it"
+is not a writing request, it is a confession.
+
+**Gap 3 — the corpus only knew how to break models, not how they fail on their
+own.** Every class we tracked was an *attack*. But the same "known unknowns"
+benchmark shape — a question with **no determinate answer** — has a second
+use: the failure mode is not refusal, it is **confident fabrication**. A model
+asked for the exact grain count of every beach, the score of a 2031 series, or
+the third paragraph of a paper it has never seen, will produce a specific,
+plausible, quotable answer. That is OWASP LLM09 (Misinformation), and it was
+the last uncovered category with a clean, testable shape.
+**Added.** New category `misinformation/` (LLM09) with
+`wordlists/misinformation/unknowable-probes.txt` — five families (the number
+that does not exist, the event that has not happened, the document it cannot
+see, the private detail it cannot know) plus the "answer anyway" pressure
+family.
+**Defense.** Abstention over plausible invention; verify that citations exist;
+route uncertainty to a human; measure the abstention rate, not just accuracy.
+
+**Gap 4 — the domain layer.** A tool-argument injection that swaps the URL for
+a **punycode homograph** (`xn--…`) renders as the domain the reviewer expects
+and resolves to a different host — invisible to a human reviewer, invisible to
+a filter that matches literal domains.
+**Added.** Punycode/IDN entries in `agents/tool-argument-injection.txt` (with
+`example.invalid` targets only), plus `punycode` in the transform taxonomy.
+**Defense.** Resolve the hostname and compare the *resolved* address against an
+allow-list; never trust the rendered form.
+
+**Measured.** Corpus: 694 → **835** (F-012) → **929** phrases (919 unique),
+9 → **10 categories**, 41 files. Tests: 32 → **47**. `scripts/verify_claims.py`
+re-derives every published number; `scripts/validate.py` stays green with
+only the known cross-file duplicate warnings.
+
+**What we did not take.** The steganography toolkit's *file-format* channels
+(LSB in images/audio, PDF layers, archive nesting, network timing) are a
+forensics discipline, not a prompt-injection class — they need a different
+detector and a different defender. The "known unknowns" *benchmark* itself is
+a research harness, not an attack corpus; we took only its *question shape*.
+And the automated injection harness (`AutoRedTeam`) contributes one idea worth
+keeping — record every attempt with a verdict, so a regression is a diff — but
+it is a Selenium driver for a chat UI, not something a wordlist should grow.
+
+**Sources.**
+[ST3GG](https://github.com/elder-plinius/ST3GG) (text-carrier examples:
+braille, capitalization, combining diacritics, confusable whitespace,
+directional override, emoji skin tone/substitution, hangul filler, homoglyph,
+invisible ink, math alphanumeric, morse, multibase, normalization, punycode,
+qr, sentence length, variation selector, whitespace, word choice) ·
+[P4RS3LT0NGV3](https://github.com/elder-plinius/P4RS3LT0NGV3) (`js/tools/`:
+AntiClassifier, Bijection, Codes, Emoji, Gibberish, Mutation, SpellingAlphabet) ·
+[V3R1T4S](https://github.com/elder-plinius/V3R1T4S) (`bank/categories.json`) ·
+[AutoRedTeam](https://github.com/elder-plinius/AutoRedTeam) ·
+OWASP LLM Top 10 (LLM01 / LLM09)
+
+---
 
 ### F-012 · 2026-11-21 · Round-2 survey of the public jailbreak collections, and a scanner that closes F-005/006/007 · High · confirmed
 
@@ -603,9 +700,10 @@ silent (no error, filter just passes it).
 - [ ] **Normalization gaps** — which Unicode confusable ranges survive NFKC
       and still read as ASCII to a human?
 - [ ] **B-owasp-gap-audit** — map every OWASP LLM Top 10 (2025) id to a corpus
-      file. Still uncovered: LLM03 supply chain (model-artifact backdoors),
-      LLM04 data/model poisoning, LLM08 vector & embedding weaknesses,
-      LLM09 misinformation, LLM10 unbounded consumption.
+      file. Covered now: LLM01, LLM02, LLM05, LLM07, LLM09. Still uncovered:
+      LLM03 supply chain (model-artifact backdoors), LLM04 data/model
+      poisoning, LLM08 vector & embedding weaknesses, LLM10 unbounded
+      consumption.
 - [ ] **B-class-translation** — the classes added in F-012 (dual response,
       attribute override, tool-argument injection) exist only in English.
       Translating them into the 10 existing languages would extend F-001's
@@ -615,6 +713,9 @@ silent (no error, filter just passes it).
       through a markdown/HTML renderer and assert the payload is neutralized.
 - [ ] **B-voice-surface** — no corpus coverage for voice/audio channels
       (transcript-borne injection, audio-over-text instruction smuggling).
+- [ ] **B-carrier-decoders** — `promptwl.carriers()` says *which* channel is in
+      use; decoding the Braille / case / whitespace payloads it finds is
+      still manual. From F-013.
 
 ---
 
