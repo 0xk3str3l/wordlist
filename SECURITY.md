@@ -24,6 +24,10 @@ and benchmark guardrails, filters, and safety evaluations.
 - Novel attack chains not already documented in public research.
 - System-specific exploitation instructions for named production services.
 - Personal data or credentials of any kind.
+- Working payloads aimed at a live target. The output-channel payloads in
+  `wordlists/output/` are inert by construction — `alert(1)` and
+  `example.invalid`, never a real host — so they can be rendered by a test
+  harness without pointing anything at a real system.
 
 ## Reporting a concern
 

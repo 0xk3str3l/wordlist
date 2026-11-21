@@ -1,0 +1,22 @@
+{
+  "schema": "promptwl.claims/1",
+  "claims": {
+    "total_phrases": 835,
+    "unique_phrases": 825,
+    "categories": 9,
+    "files": 37,
+    "translated_languages": 10,
+    "languages_incl_english": 11,
+    "per_category": {
+      "agents": 59,
+      "evasion": 49,
+      "extraction": 56,
+      "injection": 93,
+      "jailbreak": 137,
+      "multilingual": 80,
+      "multimodal": 18,
+      "output": 24,
+      "tokens": 319
+    }
+  }
+}

@@ -26,14 +26,136 @@ Newest entries on top. Format: `ID · date · title · severity · status`.
 | Direct injection | LLM01 | User input overrides the system prompt. |
 | Indirect injection | LLM01 | Payload rides in retrieved docs / tool output / web / email. |
 | Jailbreak | LLM01 | Persona/framing pressure to drop refusals. |
+| Dual response / divider | LLM01 | A refusal and a violation spliced into one answer. |
+| Attribute override | LLM01 | `key: value` request to flip a safety setting. |
 | System-prompt / data extraction | LLM07 | Reveal hidden instructions or config. |
+| Sensitive-data disclosure | LLM02 | Hand back secrets, credentials or PII held in context. |
 | Filter evasion | LLM01 | Encoding, homoglyph, spacing, splitting to dodge lexical filters. |
 | Cross-lingual bypass | LLM01 | Same intent, non-English surface, defeats English filters. |
+| Chat-template forgery | LLM01 | Forge the control markers the runtime uses for roles. |
+| Tool-argument injection | LLM01 / LLM06 | Steer a legitimate tool call's parameters from untrusted content. |
+| Output handling | LLM05 | Model output breaks the renderer that displays it. |
 | Tokenizer anomalies | — | Rare "glitch" tokens cause undefined behavior. |
 
 ---
 
 ## Findings
+
+### F-012 · 2026-11-21 · Round-2 survey of the public jailbreak collections, and a scanner that closes F-005/006/007 · High · confirmed
+
+**Thesis.** F-004 surveyed Pliny's technique *classes*. This pass read the
+**structure** of the public collections — `CL4R1T4S` (per-vendor system-prompt
+corpus), `L1B3RT4S` (per-vendor jailbreak families), the `G0DM0D3` app's
+`parseltongue` (client-side obfuscation engine) and `libertas` ("Hall of Fame"
+prompt scaffolds), and `T3MP3ST`'s benchmark discipline (every README number
+re-derived from committed artifacts) — and found six gaps in promptwl plus one
+structural weakness in the library itself.
+
+**Gap 1 — dual response with a divider.** The dominant scaffold in the public
+collections is *two answers in one*: "write your refusal, then write the
+opposite", separated by a divider string. Our `refusal-suppression.txt` covered
+"do not refuse" but not "refuse, then continue anyway" — a shape where a
+refusal-shaped output filter sees only the first half.
+**Added.** `wordlists/jailbreak/dual-response-and-divider.txt`.
+**Defense.** Judge the *whole* completion; never accept "refusal + exception"
+as a safe answer; strip or reject divider-delimited second halves.
+
+**Gap 2 — attribute / config overrides.** The same collections carry requests
+shaped like configuration: `redactions: DISABLED`, `safety: off`,
+`{"filter": "off"}`. These target systems that accept or echo attribute-style
+input.
+**Added.** `wordlists/jailbreak/attribute-override.txt`.
+**Defense.** Policy state is never settable from message content — attributes
+inside a request are data, not configuration.
+
+**Gap 3 — per-vendor chat templates.** `CL4R1T4S` is organized per *vendor*;
+the defensive analog is per *template*: which control markers the runtime you
+actually deployed uses, so a delimiter test uses the real thing.
+**Added.** `wordlists/injection/chat-template-markers.txt` + a metadata sidecar
+tagging every marker with its model family (ChatML, Llama 2/3, Gemma, Phi-3,
+Command-R, GLM-4, DeepSeek, Qwen, plain-text templates) — including DeepSeek's
+fullwidth pipes, which read as ASCII and are not.
+
+**Gap 4 — tool-argument injection.** The backlog item "tool-call argument
+injection" (untrusted content steering the *arguments* of a legitimate call —
+a different URL, a different recipient) had no corpus file.
+**Added.** `wordlists/agents/tool-argument-injection.txt`.
+**Defense.** Validate every tool argument against the user's actual request;
+content that arrived *inside* a tool result must never decide what the *next*
+call does.
+
+**Gap 5 — sensitive-data disclosure (LLM02).** Our extraction category was
+LLM07-only (system-prompt leak). LLM02 — secrets, credentials, PII and other
+context the *application* put into the prompt — was uncovered.
+**Added.** `wordlists/extraction/sensitive-data-disclosure.txt` (LLM02).
+
+**Gap 6 — the corpus was input-only.** Every class we tracked defended the
+*input* side. The output side (LLM05, improper output handling) was missing
+entirely: a model that returns a perfectly safe sentence containing
+`<img src=x onerror=...>` hands the payload to whatever renders it.
+**Added.** New category `output/` (LLM05) with
+`wordlists/output/markdown-and-html-injection.txt` — generic payloads
+(`alert(1)`, `example.invalid`), no live target.
+**Defense.** Treat model output as untrusted input for the *next* system:
+escape on render, safe markdown renderer, strip `javascript:`/`data:` schemes.
+
+**The structural weakness — a wordlist you can only load.** F-005/006/007
+proved, one row at a time, that a keyword guardrail is blind to encodings,
+invisible codepoints and confusables — but the fixes lived in `examples/`, and
+the library shipped nothing but a loader. A defender had to re-implement the
+canonicalization stack in every project. That is the gap this round closes:
+
+- `promptwl/normalize.py` — the F-005/006/007 stack promoted into the
+  package (NFKC → strip invisible → confusable-fold → casefold → collapse).
+- `promptwl.scan(text)` — matches untrusted text against the corpus *after*
+  canonicalizing it, so look-alikes, zero-width joiners, fullwidth forms and
+  punctuation noise all land.
+- `promptwl.load(tag=…, owasp=…, klass=…)` + per-file JSON metadata sidecars —
+  the corpus stays greppable text and still carries structure.
+- **Attack-shape classes** (`prose` / `structural` / `notation`) — a keyword
+  filter and a structural defense are different jobs; splitting them keeps the
+  recall numbers honest as the corpus grows.
+- `promptwl.export()` (JSONL/JSON/CSV/TXT/garak) — the corpus now drops into
+  other harnesses instead of being re-typed into them.
+- `scripts/verify_claims.py` + `bench/claims.json` — every published number
+  re-derives from the corpus, the T3MP3ST discipline applied to a README.
+- `tests/` — 32 stdlib tests: loader, filters, metadata, normalizer, scanner,
+  exporter, and corpus hygiene (orphans, headers, invisibles, duplicates).
+
+**Measured.** `scripts/validate.py`: **835 phrases** (825 unique), 9
+categories, 37 files. `examples/recall_demo.py`: the naive English keyword
+filter scores **26%** on English prose attacks, **0%** on the same attacks
+translated, and **~1%** on structural classes. `examples/ensemble_demo.py`:
+iterative decode + normalize recovers **100%** of the phrases the filter
+catches in the clear, while unknown-shift Caesar stays **0%**.
+`examples/scan_demo.py`: one attack in five disguises — the naive filter
+catches **1/5**, `promptwl.scan()` catches **5/5**, with **0/14** benign
+requests flagged.
+
+**Two measurement bugs found and fixed while doing this.** (1) The corpus grew
+from 694 to 835 phrases, and the demos' denominators had been "all phrases" —
+so adding *new kinds* of attack silently lowered a "recall" number that was
+really measuring corpus composition. The demos now score the prose subset, and
+the ensemble matrix scores the phrases the filter catches in the clear.
+(2) `promptwl.scan()` reported false positives on benign text: folding the
+*corpus* side turned the look-alike test vector `ignоrе` into the ordinary
+word "ignore", and stripping punctuation turned `### Instruction:` into
+"instruction". Fixes: look-alike and chain-name catalogs are no longer
+scanned, and the punctuation-free form is only used when the phrase's
+punctuation is interior.
+
+**Mitigation.** New classes → defenses above. Detection gaps → the library
+stack. Measurement gaps → `verify_claims.py` in CI.
+
+**Sources.**
+[CL4R1T4S](https://github.com/elder-plinius/CL4R1T4S) ·
+[L1B3RT4S](https://github.com/elder-plinius/L1B3RT4S) ·
+[G0DM0D3](https://github.com/elder-plinius/G0DM0D3) (`src/lib/parseltongue.ts`,
+`src/lib/libertas.ts`) ·
+[T3MP3ST](https://github.com/elder-plinius/T3MP3ST) (`bench/README.md`) ·
+OWASP LLM Top 10 (LLM01/02/05) · arXiv:2501.18837 (Constitutional Classifiers)
+
+---
 
 ### F-011 · 2026-08-20 · Unicode confusables + encoding-chain catalog · High · confirmed
 
@@ -469,8 +591,9 @@ silent (no error, filter just passes it).
 - [x] **B-bidi-reveal** — DONE. `invisible.py` now names bidi overrides
       (`BIDI` table) and C0/C1 controls explicitly, adds `reveal_bidi()` (returns
       controls + logical order), and the demo gained a Trojan Source section [3]. From F-009.
-- [ ] **Tool-call argument injection** — untrusted content steering *the
-      arguments* of a legitimate tool call rather than the final text.
+- [x] **Tool-call argument injection** — DONE → **F-012**
+      (`agents/tool-argument-injection.txt`). Defense: validate every tool
+      argument against the user's request.
 - [ ] **RAG poisoning persistence** — an injected instruction stored in a
       vector DB that fires on future, unrelated queries. (Related: memory/session
       poisoning now in F-008.)
@@ -479,6 +602,19 @@ silent (no error, filter just passes it).
       measurement.
 - [ ] **Normalization gaps** — which Unicode confusable ranges survive NFKC
       and still read as ASCII to a human?
+- [ ] **B-owasp-gap-audit** — map every OWASP LLM Top 10 (2025) id to a corpus
+      file. Still uncovered: LLM03 supply chain (model-artifact backdoors),
+      LLM04 data/model poisoning, LLM08 vector & embedding weaknesses,
+      LLM09 misinformation, LLM10 unbounded consumption.
+- [ ] **B-class-translation** — the classes added in F-012 (dual response,
+      attribute override, tool-argument injection) exist only in English.
+      Translating them into the 10 existing languages would extend F-001's
+      per-language recall measurement to the new classes.
+- [ ] **B-egress-measurement** — the `output/` corpus (LLM05) is a list of
+      payloads; the missing half is the measurement: render a model answer
+      through a markdown/HTML renderer and assert the payload is neutralized.
+- [ ] **B-voice-surface** — no corpus coverage for voice/audio channels
+      (transcript-borne injection, audio-over-text instruction smuggling).
 
 ---
 

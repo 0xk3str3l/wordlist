@@ -8,7 +8,8 @@
 
 <p align="center">
   <a href="https://owasp.org/www-project-top-10-for-large-language-model-applications/"><img alt="OWASP LLM Top 10" src="https://img.shields.io/badge/OWASP-LLM%20Top%2010-blue"></a>
-  <img alt="phrases" src="https://img.shields.io/badge/phrases-690%2B-e4572e">
+  <img alt="phrases" src="https://img.shields.io/badge/phrases-835-e4572e">
+  <img alt="categories" src="https://img.shields.io/badge/categories-9-845d41">
   <img alt="languages" src="https://img.shields.io/badge/languages-11-845d41">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-green">
   <img alt="intent" src="https://img.shields.io/badge/intent-defensive-9aa0a6">
@@ -27,7 +28,7 @@ Every pentester `git clone`s [SecLists](https://github.com/danielmiessler/SecLis
 ```python
 import promptwl
 
-for entry in promptwl.load():                 # 530+ phrases, with metadata
+for entry in promptwl.load():                 # 835 phrases, with metadata
     verdict = my_guardrail(entry.text)        # your classifier under test
     assert verdict == "block", f"missed: {entry.text!r} ({entry.category})"
 ```
@@ -46,16 +47,19 @@ for entry in promptwl.load():                 # 530+ phrases, with metadata
 
 | Category | OWASP | What it covers |
 |---|---|---|
-| `injection/` | LLM01 | Instruction override, delimiter/role-boundary confusion, multi-turn payload splitting |
-| `jailbreak/` | LLM01 | Persona overrides, refusal suppression, hypothetical/fictional framing, authority impersonation |
-| `extraction/` | LLM07 | System-prompt & config leak probes, training-data / memorization probes |
+| `injection/` | LLM01 | Instruction override, delimiter/role-boundary confusion, multi-turn payload splitting, **real chat-template control markers** |
+| `jailbreak/` | LLM01 | Persona overrides, refusal suppression, hypothetical/fictional framing, authority impersonation, **dual-response + divider**, **config-style attribute overrides** |
+| `extraction/` | LLM07 / **LLM02** | System-prompt & config leak probes, training-data / memorization probes, **secret & PII disclosure probes** |
 | `evasion/` | LLM01 | Encoding, homoglyph, spacing, invisible-character, and cross-language obfuscation |
-| `agents/` | LLM01 | **Indirect** injection in docs, tool output, web, email; persistent-memory poisoning |
+| `agents/` | LLM01 | **Indirect** injection in docs, tool output, web, email; persistent-memory poisoning; **tool-argument injection** |
 | `multilingual/` | LLM01 | Core override/jailbreak patterns in 10 languages — because English-only filters silently fail |
 | `multimodal/` | LLM01 | Instructions hidden in images, alt-text, file metadata, or document layers read by vision pipelines |
+| `output/` | **LLM05** | **Output-channel payloads** (HTML/Markdown/CSV breakout) — the output side of the trust boundary |
 | `tokens/` | — | Anomalous / "glitch" tokens, control characters, and bidi (Trojan Source) artifacts for tokenizer robustness |
 
-Each `.txt` is one phrase per line; lines starting with `#` are metadata/comments. Load them however you like — plain `grep`, `cat`, or the zero-dependency Python package.
+Each `.txt` is one phrase per line; lines starting with `#` are metadata/comments (prefix a phrase with `\` to keep a literal leading `#`, e.g. `\#\#\# Instruction:`). Load them however you like — plain `grep`, `cat`, or the zero-dependency Python package.
+
+Every file is also classified by **attack shape** — `prose` (phrases a keyword or semantic filter can target), `structural` (literal control markers and payloads that need literal matching, output escaping or tokenizer hygiene), or `notation` (codepoint catalogs and probe vocabulary). A keyword filter and a structural defense are two different jobs; the split keeps the numbers honest.
 
 ## Quick start
 
@@ -69,10 +73,11 @@ pip install promptwl
 import promptwl
 
 promptwl.categories()          # ['injection', 'jailbreak', 'extraction', ...]
-promptwl.stats()               # {'injection': 57, ..., 'total': 694}
+promptwl.stats()               # {'injection': 93, ..., 'total': 835}
+promptwl.classes()             # ['notation', 'prose', 'structural']
 promptwl.phrases("multilingual")  # non-English patterns for one category
-promptwl.phrases("agents")     # list[str] for one category
-for e in promptwl.load():      # Entry(text, category, file, title)
+promptwl.phrases(klass="structural")  # literal markers & payloads only
+for e in promptwl.load():      # Entry(text, category, file, title, tags, owasp, ...)
     ...
 ```
 
@@ -82,6 +87,69 @@ for e in promptwl.load():      # Entry(text, category, file, title)
 git clone https://github.com/parrot-r/wordlist
 cat wordlists/injection/*.txt
 ```
+
+## Scan live traffic
+
+A wordlist you can only load is half a tool. `promptwl.scan()` matches untrusted
+text against the corpus **after canonicalizing it** — NFKC → strip invisible
+codepoints → UTS-39-style confusable-fold → casefold → whitespace collapse —
+so the attacks that hide behind Cyrillic look-alikes, zero-width joiners or
+fullwidth forms still land:
+
+```python
+import promptwl
+
+for hit in promptwl.scan(untrusted_input):
+    log.warning("promptwl: %s (%s)", hit.entry.text, hit.entry.category)
+```
+
+```text
+disguise                   naive    scan
+plain English              block     HIT
+Cyrillic look-alikes       allow     HIT
+zero-width joiners         allow     HIT
+fullwidth Latin            allow     HIT
+punctuation noise          allow     HIT
+
+naive keyword filter : 1/5 caught
+promptwl.scan()      : 5/5 caught
+```
+
+`scan()` is a **recall-oriented baseline, not a guardrail**: it knows the patterns in the corpus and nothing else. Pair it with a semantic classifier, and measure the false-positive rate on your own traffic — `examples/scan_demo.py` runs the comparison end to end.
+
+## Metadata, classes and filters
+
+Files can carry a JSON sidecar — `wordlists/<category>/<name>.meta.json` — that annotates individual phrases while keeping the corpus greppable:
+
+```json
+{
+  "schema": "promptwl.meta/1",
+  "entries": {
+    "<|start_header_id|>": {"tags": ["llama3", "role-marker"], "owasp": "LLM01"}
+  }
+}
+```
+
+```python
+promptwl.load(tag="llama3")        # every Llama-3 marker
+promptwl.load(owasp="LLM05")      # every improper-output-handling pattern
+promptwl.load(klass="prose")      # phrase-shaped attacks only
+promptwl.tags()                   # every tag in the corpus
+```
+
+## Export to other harnesses
+
+The corpus is plain text, so it drops into anything. `promptwl.export()` writes
+JSONL, JSON, CSV, plain text, or a garak-style prompt file:
+
+```python
+promptwl.export("jsonl", path="corpus.jsonl")   # one object per phrase
+promptwl.export("garak", path="prompts.txt")    # <|endoftext|>-separated
+```
+
+Every published number in this README is machine-checked: `python3
+scripts/verify_claims.py` re-derives the counts from the corpus and fails CI if
+the badge on the front page has drifted.
 
 ## Example: score a guardrail's recall
 
@@ -110,10 +178,10 @@ python3 examples/recall_demo.py
 ```
 HEADLINE — same phrasing, English vs translated
 ----------------------------------------------------
-English (injection etc.)      55%   █████████████···········
-The same, translated           0%   ························
+English (prose)               26%   ██████··················
+The same, translated            0%   ························
 
-  → the filter catches ~55% of these attacks in English
+  → the filter catches ~26% of these attacks in English
     and ~0% the moment the attacker switches language.
 ```
 
@@ -125,7 +193,7 @@ A second demo pits **string-composition obfuscation against a decode/normalize d
 python3 examples/ensemble_demo.py
 ```
 
-Encodings (leetspeak, Base64, ROT13, reversal, chains) drop the filter to 0%; an iterative decode + Unicode-normalize pre-pass fully recovers the *known* transforms — while a Caesar-7 shift and Cyrillic homoglyphs stay at 0%, showing exactly where enumerate-and-invert ends and semantic defense has to start.
+Encodings (leetspeak, Base64, ROT13, reversal, chains) drop the filter to 0%; an iterative decode + Unicode-normalize pre-pass recovers **100%** of the phrases it catches in the clear — while a Caesar-7 shift and unknown-shift residuals stay at 0%, showing exactly where enumerate-and-invert ends and semantic defense has to start.
 
 A third demo catches **ASCII smuggling** — invisible payloads hidden in zero-width characters and the Unicode Tags block:
 
@@ -134,6 +202,12 @@ python3 examples/invisible_demo.py
 ```
 
 A `"lgtm, minor cleanup"` commit message that carries 28 invisible codepoints decoding to a hidden instruction — `grep` finds nothing, the scanner flags all 28, reveals the text, and strips it. Sanitize on **ingestion and egress**: the footprint channel (payloads smuggled into an agent's own commits/comments) is the half most pipelines forget.
+
+A fourth demo closes the loop — **the same attack in five disguises**, scored against the naive filter and against `promptwl.scan()`:
+
+```bash
+python3 examples/scan_demo.py
+```
 
 ## The token-anomaly corpus (broader than garak)
 
@@ -179,6 +253,16 @@ It intentionally does **not** ship novel weaponized exploits or step-by-step ins
 
 New patterns, categories, and translations are welcome — the whole point is to keep pace with how attacks on AI evolve. See [`CONTRIBUTING.md`](CONTRIBUTING.md). Keep entries at the **pattern** level, defensively framed, and add them to `manifest.json`.
 
+[`ROADMAP.md`](ROADMAP.md) records the survey behind the current corpus — what we took from the public jailbreak collections, what is still open, and what we deliberately left out.
+
+Before you open a PR:
+
+```bash
+python3 scripts/validate.py        # manifest ↔ corpus consistency
+python3 -m unittest discover -s tests   # loader, scanner, hygiene
+python3 scripts/verify_claims.py   # README numbers still match the corpus
+```
+
 ## The mascot
 
 This project is kept by **Parrot** 🦜 — an African Grey coding agent whose whole
@@ -194,6 +278,7 @@ character in [`MASCOT.md`](MASCOT.md).
 - [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/)
 - [SecLists](https://github.com/danielmiessler/SecLists) — the inspiration for the format
 - [garak](https://github.com/NVIDIA/garak) — LLM vulnerability scanner
+- [CL4R1T4S](https://github.com/elder-plinius/CL4R1T4S) & [L1B3RT4S](https://github.com/elder-plinius/L1B3RT4S) — public collections of model system prompts and jailbreak framings, read here as a **defender's literature review** (technique classes and their countermeasures, not payloads — see [`ROADMAP.md`](ROADMAP.md) and journal entries F-004 / F-012)
 - Rumbelow & Watkins (2023), *SolidGoldMagikarp* — anomalous tokens
 - Levi et al. (2024), arXiv:2411.01084 — string-composition attacks on LLM filters
 - Unicode Consortium, [UTS-39](https://unicode.org/reports/tr39/) — confusable character detection

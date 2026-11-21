@@ -36,6 +36,14 @@ phrase two
 phrase three
 ```
 
+**A phrase that starts with `#`** — prefix it with a backslash so the loader
+does not read it as a comment (`\#` → `#`):
+
+```
+\#\#\# Instruction:
+\#\#\# Response:
+```
+
 **Token corpus files** — two additional conventions apply:
 
 - Invisible or control characters **must** be stored as `U+NNNN NAME` notation,
@@ -45,6 +53,38 @@ phrase three
   (see `wordlists/tokens/unicode-confusables.txt` Part A for the format).
   Confusable-substituted test strings (Part B) may contain literal non-ASCII chars
   because those are visible and are the actual test input.
+
+## Metadata sidecars
+
+A file can carry a JSON sidecar next to it — `wordlists/<category>/<name>.meta.json`
+— that annotates individual phrases without turning the corpus into JSON:
+
+```json
+{
+  "schema": "promptwl.meta/1",
+  "entries": {
+    "<|start_header_id|>": {"tags": ["llama3", "role-marker"], "owasp": "LLM01"}
+  }
+}
+```
+
+Every key must be a phrase that actually appears in the corpus file —
+`scripts/validate.py` fails the build otherwise. Use sidecars for tags
+(model family, technique), OWASP overrides and references.
+
+## Attack shape (`class`)
+
+Every file registered in `manifest.json` declares what shape of attack it holds:
+
+| `class` | Meaning | Example |
+|---|---|---|
+| `prose` | Natural-language phrases a keyword or semantic filter can target | `jailbreak/persona-override.txt` |
+| `structural` | Literal markers and payloads that need literal matching, output escaping or tokenizer hygiene | `injection/chat-template-markers.txt` |
+| `notation` | Codepoint catalogs and probe vocabulary — test inputs, not attack strings | `tokens/boundary/separators.txt` |
+
+If a file's entries fold into ordinary English words (look-alike test vectors,
+chain names), set `"scan": false` on it so `promptwl.scan()` does not report
+false positives on benign traffic.
 
 ## Invisible-character hygiene (F-006)
 
@@ -73,12 +113,17 @@ notation or remove them.
 - Add lines to an existing file under `wordlists/<category>/`, or create a new
   file with a `#`-comment header (see existing files for the format).
 - If you add a **new file**, register it in `manifest.json` with a `path`, `title`,
-  and `description`. If you add a **new category**, add a full category block.
+  `description` and `class` (and `owasp` if the file does not share its
+  category's OWASP id). If you add a **new category**, add a full category block.
+- If you add a file that is *not* a list of attack phrases (probe vocabulary,
+  codepoint catalogs, look-alike test vectors), set `"scan": false`.
 
 ## Validate before you open a PR
 
 ```bash
-python3 scripts/validate.py
+python3 scripts/validate.py             # manifest ↔ corpus consistency
+python3 -m unittest discover -s tests   # loader, scanner, hygiene
+python3 scripts/verify_claims.py        # README numbers still match the corpus
 ```
 
 Every file listed in `manifest.json` must exist and load without error. Also run
@@ -88,10 +133,11 @@ the smoke-test suite:
 python3 examples/recall_demo.py
 python3 examples/ensemble_demo.py
 python3 examples/invisible_demo.py
+python3 examples/scan_demo.py
 python3 examples/tokenizer_probe.py
 ```
 
-All four should exit cleanly (exit code 0).
+All five should exit cleanly (exit code 0).
 
 ## What makes a good contribution
 
@@ -101,6 +147,9 @@ All four should exit cleanly (exit code 0).
   RAG poisoning, multimodal prompt injection, voice-interface injection.
 - New **token corpus entries**: publicly-documented glitch tokens, confusable
   character pairs, encoding chain patterns, or boundary separators not yet listed.
+- New **output-side** patterns: the corpus was input-only until 0.4.0, and the
+  output channel (LLM05) is where a model turns a harmless answer into a
+  stored XSS or a hostile link.
 - **Citations** — a link to where a pattern is documented in public research or
   OWASP makes the contribution much easier to review.
 

@@ -57,6 +57,7 @@ are produced. The journal follows a strict format:
 | 0.3.0 | 539 | Token-anomaly corpus: fragmentation + boundary probes |
 | 0.3.1 | 694 | Unicode confusables, encoding chains, expanded glitch list |
 | 0.3.2 | 694 | PyPI packaging — `pip install promptwl` |
+| 0.4.0 | 835 | Scanner API, metadata sidecars, chat templates, output handling (LLM05), tool-argument injection, verified claims |
 
 ## License
 

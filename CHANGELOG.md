@@ -5,6 +5,82 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.4.0] — 2026-11-21
+
+### Added
+- **Scanner API** — `promptwl.scan(text)` matches untrusted text against the
+  corpus after canonicalizing it (NFKC → strip invisible codepoints →
+  UTS-39-style confusable-fold → casefold → whitespace collapse), so attacks
+  hidden behind Cyrillic look-alikes, zero-width joiners, fullwidth forms or
+  punctuation noise are still caught. Returns `Match(entry, span, needle)`.
+- **`promptwl/normalize.py`** — the F-005 / F-006 / F-007 canonicalization
+  stack, promoted from `examples/` into the library so the demos and the
+  scanner can never drift apart. Exports `normalize`, `strip_invisible`,
+  `confusable_fold`, `reveal_tags`, `reveal_bidi`, `depunctuate`, `variants`.
+- **Metadata sidecars** — `wordlists/<category>/<name>.meta.json` annotates
+  individual phrases (tags, OWASP id, references) while the corpus stays plain
+  greppable text. `promptwl.load(tag=..., owasp=..., klass=...)` filters on it.
+- **Attack-shape classes** — every manifest file is now `prose`, `structural`
+  or `notation`. A keyword filter and a structural defense are different jobs;
+  the split keeps the recall numbers honest.
+- **`promptwl.export()`** — JSONL / JSON / CSV / TXT / garak export, so the
+  corpus drops into other red-team harnesses.
+- **New corpus files** (technique classes surveyed from the public
+  jailbreak/system-prompt collections — journal F-012):
+  - `wordlists/jailbreak/dual-response-and-divider.txt` — refusal-then-
+    violation splicing with a divider between the halves.
+  - `wordlists/jailbreak/attribute-override.txt` — `key: value` style attempts
+    to flip a safety setting from inside message content.
+  - `wordlists/injection/chat-template-markers.txt` — real control markers from
+    deployed chat templates (ChatML, Llama, Gemma, Phi, Command-R, GLM,
+    DeepSeek, Qwen, plain-text templates) with per-family metadata.
+  - `wordlists/agents/tool-argument-injection.txt` — steering the *arguments*
+    of a legitimate tool call (closes a backlog item).
+  - `wordlists/extraction/sensitive-data-disclosure.txt` — LLM02 probes.
+  - `wordlists/output/markdown-and-html-injection.txt` — **new `output/`
+    category (LLM05)**: output-channel payloads that break the renderer.
+- **`scripts/verify_claims.py`** + `bench/claims.json` — every published number
+  in the README is re-derived from the corpus and fails CI when it drifts.
+- **`tests/`** — 32 stdlib `unittest` tests: loader, filters, metadata,
+  normalizer, scanner, exporter, and corpus hygiene (orphan files, missing
+  headers, invisible codepoints, in-file duplicates).
+- **`examples/scan_demo.py`** — one attack in five disguises, scored against
+  the naive filter and against `promptwl.scan()`.
+- **`ROADMAP.md`** — the survey behind this release: what was taken from the
+  public jailbreak collections, what is still open, and what was deliberately
+  left out (and why).
+
+### Changed
+- Loader: a line starting with `\` is an escaped phrase, so corpus files can
+  carry markers that begin with `#` (`\#\#\# Instruction:`).
+- `scripts/validate.py` — now also detects orphaned corpus files, duplicate
+  phrases, missing file headers, and metadata sidecars that don't line up
+  with their corpus. `--strict` turns warnings into failures.
+- Corpus hygiene: removed 8 same-file duplicate phrases from
+  `tokens/anomalous-tokens.txt`; the chat-template markers moved to their own
+  canonical file; `tokens/unicode-confusables.txt` and
+  `tokens/encoding-chains.txt` are marked non-scannable (they are test
+  vectors whose folded forms collide with ordinary English).
+- Demos: `recall_demo.py` reports prose-vs-translated and structural-class
+  recall; `ensemble_demo.py` scores the attack matrix over the phrases the
+  filter catches in the clear, so the recovery metric stays meaningful as the
+  corpus grows.
+- `examples/invisible.py` and `examples/string_transforms.py` now import the
+  canonicalization tables from the library instead of keeping their own copy.
+
+### Measured
+- Corpus: 539 → **835 phrases** (825 unique) across **9 categories**,
+  37 files, 11 languages.
+- Naive English keyword filter: **26%** recall on English prose attacks,
+  **0%** on the same attacks translated, **~1%** on structural classes.
+- String-composition defense: **100%** recovery of the known transforms over
+  the phrases the filter catches in the clear; unknown-shift Caesar stays
+  **0%** (the standing semantic-layer residual).
+- `promptwl.scan()`: **5/5** disguises caught vs **1/5** for the naive filter,
+  **0/14** benign requests flagged.
+
+---
+
 ## [0.3.2] — 2026-08-20
 
 ### Added

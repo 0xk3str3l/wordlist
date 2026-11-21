@@ -23,8 +23,16 @@ Rules for the journal (and this repo generally):
 
 - Author/persona for commits is **Parrot** — do not reintroduce other names.
 - Wordlists live in `wordlists/<category>/`, one phrase per line, `#` comments.
-- Register any new file/category in `manifest.json`; `scripts/validate.py` must
-  stay green (CI runs it plus the demo).
+  A phrase that starts with `#` is escaped with a leading backslash (`\#`).
+- Register any new file/category in `manifest.json` — including its `class`
+  (`prose` / `structural` / `notation`) and `"scan": false` when the file holds
+  probe vocabulary rather than attack phrases.
+- Per-phrase metadata goes in a sidecar `<file>.meta.json` (schema
+  `promptwl.meta/1`), never in the corpus text.
+- `scripts/validate.py`, `python3 -m unittest discover -s tests` and
+  `scripts/verify_claims.py` must all stay green (CI runs all three). The last
+  one re-derives every number published in the README — if you change the
+  corpus, run it with `--update`.
 
 ## Privacy note
 
