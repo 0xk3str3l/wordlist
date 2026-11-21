@@ -6,6 +6,8 @@
 #          bytes are different, so keyword matchers see gibberish.
 # format (Part A): U+NNNN SCRIPT NAME → replaces → U+0041 ASCII NAME (one pair per line)
 # format (Part B): confusable-substituted attack keywords — actual test strings
+# use: feed Part B to a filter and confirm it misses the lookalike form; then fold
+#      with UTS-39 (see promptwl.normalize.confusable_fold) and confirm it hits.
 # source-level: Unicode Consortium UTS-39 Confusables (confusables.txt, public),
 #               Cyrillic/Greek homoglyph catalogs used in IDN homograph attacks,
 #               subset that overlaps common LLM-filter trigger words.

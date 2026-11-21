@@ -31,24 +31,31 @@ def _bar(pct: float, width: int = 18) -> str:
 
 def main() -> int:
     core = {"injection", "jailbreak", "extraction"}
-    phrases = [e.text for e in promptwl.load() if e.category in core]
+    phrases = [
+        e.text
+        for e in promptwl.load()
+        if e.category in core and e.klass == "prose"
+    ]
 
     # Baseline: the phrases the naive filter catches in the clear. Obfuscation
-    # can only ever hide these, so this is the ceiling for the demo.
+    # can only ever hide these, so this is the ceiling for the demo — and the
+    # set the attack matrix is scored over (scoring over the whole corpus
+    # would measure the filter's coverage, not the decoder's recovery).
     baseline_hits = [p for p in phrases if guardrail(p) == "block"]
-    base = 100 * len(baseline_hits) / len(phrases)
+    base = 100 * len(baseline_hits) / len(phrases) if phrases else 0.0
 
     print("\npromptwl · string-composition attack vs. decode-defense 🦜  (F-005)")
     print("=" * 64)
-    print(f"corpus: {len(phrases)} English injection/jailbreak/extraction phrases")
-    print(f"naive filter in the clear: {base:.0f}% recall  ({len(baseline_hits)} caught)\n")
+    print(f"corpus: {len(phrases)} English injection/jailbreak/extraction prose phrases")
+    print(f"naive filter in the clear: {base:.0f}% recall  ({len(baseline_hits)} caught)")
+    print(f"attack matrix over the {len(baseline_hits)} phrases it catches in the clear\n")
 
     print(f"{'attack':<22}{'naive':>7}{'defended':>11}   recovery")
     print("-" * 64)
     print(f"{'(none / raw)':<22}{base:>6.0f}%{base:>10.0f}%   {_bar(base)}")
 
     for name in ATTACKS:
-        obf = [apply_attack(name, p) for p in phrases]
+        obf = [apply_attack(name, p) for p in baseline_hits]
         naive = 100 * sum(guardrail(o) == "block" for o in obf) / len(obf)
         deep = 100 * sum(defended(guardrail, o) == "block" for o in obf) / len(obf)
         print(f"{name:<22}{naive:>6.0f}%{deep:>10.0f}%   {_bar(deep)}")

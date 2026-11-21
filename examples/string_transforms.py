@@ -18,8 +18,22 @@ from __future__ import annotations
 
 import base64
 import re
-import unicodedata
 from typing import Callable, Dict, List
+
+try:  # the library owns the normalization stack; import it so it can't drift
+    from promptwl.normalize import (
+        confusable_fold as _library_confusable_fold,
+        normalize as _library_normalize,
+    )
+except ImportError:  # pragma: no cover - standalone use outside the repo
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from promptwl.normalize import (
+        confusable_fold as _library_confusable_fold,
+        normalize as _library_normalize,
+    )
 
 # --- forward transforms (attacker side, for the measurement) ---------------
 
@@ -117,27 +131,19 @@ def _unleet(s: str) -> str:
 # Curated cross-script confusable -> ASCII map (a practical subset of the
 # Unicode UTS-39 "confusables" set). NFKC does NOT fold these — Cyrillic/Greek
 # look-alikes live in separate scripts — so we handle them explicitly.
-_CONFUSABLE = {
-    # Cyrillic
-    "а": "a", "е": "e", "о": "o", "р": "p", "с": "c", "у": "y", "х": "x",
-    "і": "i", "ј": "j", "ѕ": "s", "к": "k", "н": "h", "в": "b", "м": "m",
-    "т": "t", "ѐ": "e", "ԁ": "d", "ց": "g", "ո": "n",
-    # Greek
-    "α": "a", "ο": "o", "ρ": "p", "ε": "e", "τ": "t", "ν": "v", "υ": "u",
-    "κ": "k", "ι": "i", "χ": "x", "β": "b",
-}
+# The table itself now lives in the library (promptwl.normalize) so the demo
+# and the scanner can never drift apart.
+_CONFUSABLE = {}
 
 
 def confusable_fold(s: str) -> str:
     """Map cross-script confusable letters back to their ASCII skeleton."""
-    return "".join(_CONFUSABLE.get(c, c) for c in s)
+    return _library_confusable_fold(s)
 
 
 def _normalize(s: str) -> str:
-    s = unicodedata.normalize("NFKC", s)
-    s = "".join(c for c in s if unicodedata.category(c) != "Cf")  # zero-width
-    s = confusable_fold(s.lower())
-    return re.sub(r"\s+", " ", s).strip()
+    """Canonical form used by the decode pass: NFKC → strip Cf → fold → case."""
+    return _library_normalize(s)
 
 
 def _try_b64(s: str) -> str | None:

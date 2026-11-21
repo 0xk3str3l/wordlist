@@ -4,6 +4,9 @@
 #          transforms in sequence; each layer adds one round of filter-invisibility.
 #          Also includes canonical one-layer encodings for baseline coverage.
 # format: chain descriptor lines (slug form), then annotated examples.
+# use: drive an encode/decode matrix over these chain names — for every chain, the
+#      defense should recover the seed phrase; anything left at 0% is a residual
+#      that only a semantic layer can close (examples/ensemble_demo.py).
 # defense: iterative breadth-first decode (try all known inverses at each depth);
 #          Unicode NFKC + confusable-fold normalization after each decode step.
 #          See examples/ensemble_demo.py and examples/string_transforms.py.

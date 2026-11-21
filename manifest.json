@@ -1,6 +1,6 @@
 {
   "name": "promptwl",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "A red-team and guardrail wordlist for LLMs. SecLists, but for language models.",
   "license": "MIT",
   "intent": "defensive",
@@ -14,17 +14,26 @@
         {
           "path": "wordlists/injection/instruction-override.txt",
           "title": "Instruction override",
-          "description": "Phrases that attempt to override or supersede prior instructions."
+          "description": "Phrases that attempt to override or supersede prior instructions.",
+          "class": "prose"
         },
         {
           "path": "wordlists/injection/delimiter-confusion.txt",
           "title": "Delimiter confusion",
-          "description": "Markers impersonating role/turn boundaries or system framing."
+          "description": "Markers impersonating role/turn boundaries or system framing.",
+          "class": "structural"
         },
         {
           "path": "wordlists/injection/payload-splitting.txt",
           "title": "Payload splitting",
-          "description": "Instructions assembled across multiple turns, variables, or fragments to evade single-message filters."
+          "description": "Instructions assembled across multiple turns, variables, or fragments to evade single-message filters.",
+          "class": "prose"
+        },
+        {
+          "path": "wordlists/injection/chat-template-markers.txt",
+          "title": "Chat template markers",
+          "description": "Real control markers from deployed chat templates (ChatML, Llama, Gemma, Phi, Command-R, GLM, DeepSeek, Qwen, plain-text templates) that untrusted content can forge.",
+          "class": "structural"
         }
       ]
     },
@@ -36,22 +45,38 @@
         {
           "path": "wordlists/jailbreak/persona-override.txt",
           "title": "Persona override",
-          "description": "Role-play framings that swap the model into an unrestricted persona."
+          "description": "Role-play framings that swap the model into an unrestricted persona.",
+          "class": "prose"
         },
         {
           "path": "wordlists/jailbreak/refusal-suppression.txt",
           "title": "Refusal suppression",
-          "description": "Phrases pressuring the model not to refuse or to drop caveats."
+          "description": "Phrases pressuring the model not to refuse or to drop caveats.",
+          "class": "prose"
         },
         {
           "path": "wordlists/jailbreak/hypothetical-framing.txt",
           "title": "Hypothetical / fictional framing",
-          "description": "Fictional, academic, or hypothetical wrappers used to try to bypass refusal behavior."
+          "description": "Fictional, academic, or hypothetical wrappers used to try to bypass refusal behavior.",
+          "class": "prose"
         },
         {
           "path": "wordlists/jailbreak/authority-impersonation.txt",
           "title": "Authority impersonation",
-          "description": "Claims of developer/admin/special authorization used to pressure the model into dropping constraints."
+          "description": "Claims of developer/admin/special authorization used to pressure the model into dropping constraints.",
+          "class": "prose"
+        },
+        {
+          "path": "wordlists/jailbreak/dual-response-and-divider.txt",
+          "title": "Dual response & divider",
+          "description": "Patterns that splice a refusal and an unrestricted continuation into one answer, with a divider between them.",
+          "class": "prose"
+        },
+        {
+          "path": "wordlists/jailbreak/attribute-override.txt",
+          "title": "Attribute / config override",
+          "description": "Structured key:value style attempts to flip a safety setting (redactions, filters, refusal mode) from inside message content.",
+          "class": "prose"
         }
       ]
     },
@@ -63,12 +88,21 @@
         {
           "path": "wordlists/extraction/system-prompt-leak.txt",
           "title": "System prompt leak",
-          "description": "Probes that attempt to reveal the hidden system prompt or config."
+          "description": "Probes that attempt to reveal the hidden system prompt or config.",
+          "class": "prose"
         },
         {
           "path": "wordlists/extraction/training-data-extraction.txt",
           "title": "Training data extraction",
-          "description": "Probes that try to elicit memorized training data, verbatim copyrighted text, or personal data."
+          "description": "Probes that try to elicit memorized training data, verbatim copyrighted text, or personal data.",
+          "class": "prose"
+        },
+        {
+          "path": "wordlists/extraction/sensitive-data-disclosure.txt",
+          "title": "Sensitive data disclosure",
+          "description": "Probes that ask for secrets, credentials, personal data, or internal context the application placed in the prompt.",
+          "owasp": "LLM02",
+          "class": "prose"
         }
       ]
     },
@@ -80,17 +114,20 @@
         {
           "path": "wordlists/evasion/encoding-obfuscation.txt",
           "title": "Encoding & obfuscation",
-          "description": "Cues that a payload is smuggled via encoding, homoglyphs, or spacing."
+          "description": "Cues that a payload is smuggled via encoding, homoglyphs, or spacing.",
+          "class": "structural"
         },
         {
           "path": "wordlists/evasion/invisible-characters.txt",
           "title": "Invisible characters",
-          "description": "Zero-width and Unicode Tags codepoints used for ASCII smuggling."
+          "description": "Zero-width and Unicode Tags codepoints used for ASCII smuggling.",
+          "class": "notation"
         },
         {
           "path": "wordlists/evasion/language-switching.txt",
           "title": "Language switching",
-          "description": "Cues that a payload is smuggled via translation, code-switching, or a low-resource language."
+          "description": "Cues that a payload is smuggled via translation, code-switching, or a low-resource language.",
+          "class": "prose"
         }
       ]
     },
@@ -102,12 +139,20 @@
         {
           "path": "wordlists/agents/tool-and-rag-injection.txt",
           "title": "Tool & RAG injection",
-          "description": "Indirect-injection phrases planted in docs, tool output, web pages, or email."
+          "description": "Indirect-injection phrases planted in docs, tool output, web pages, or email.",
+          "class": "prose"
         },
         {
           "path": "wordlists/agents/memory-and-session-poisoning.txt",
           "title": "Memory & session poisoning",
-          "description": "Patterns aimed at agents with persistent memory, trying to plant instructions that survive into future sessions."
+          "description": "Patterns aimed at agents with persistent memory, trying to plant instructions that survive into future sessions.",
+          "class": "prose"
+        },
+        {
+          "path": "wordlists/agents/tool-argument-injection.txt",
+          "title": "Tool argument injection",
+          "description": "Patterns that steer the arguments of a legitimate tool call (URL, recipient, query, parameters) from inside untrusted content.",
+          "class": "prose"
         }
       ]
     },
@@ -116,16 +161,66 @@
       "title": "Multilingual Injection",
       "owasp": "LLM01",
       "files": [
-        { "path": "wordlists/multilingual/es.txt", "title": "Spanish (es)", "description": "Core override/jailbreak patterns in Spanish." },
-        { "path": "wordlists/multilingual/fr.txt", "title": "French (fr)", "description": "Core override/jailbreak patterns in French." },
-        { "path": "wordlists/multilingual/de.txt", "title": "German (de)", "description": "Core override/jailbreak patterns in German." },
-        { "path": "wordlists/multilingual/pt.txt", "title": "Portuguese (pt)", "description": "Core override/jailbreak patterns in Portuguese." },
-        { "path": "wordlists/multilingual/it.txt", "title": "Italian (it)", "description": "Core override/jailbreak patterns in Italian." },
-        { "path": "wordlists/multilingual/ru.txt", "title": "Russian (ru)", "description": "Core override/jailbreak patterns in Russian." },
-        { "path": "wordlists/multilingual/zh.txt", "title": "Chinese (zh)", "description": "Core override/jailbreak patterns in Simplified Chinese." },
-        { "path": "wordlists/multilingual/ar.txt", "title": "Arabic (ar)", "description": "Core override/jailbreak patterns in Arabic." },
-        { "path": "wordlists/multilingual/hi.txt", "title": "Hindi (hi)", "description": "Core override/jailbreak patterns in Hindi." },
-        { "path": "wordlists/multilingual/ja.txt", "title": "Japanese (ja)", "description": "Core override/jailbreak patterns in Japanese." }
+        {
+          "path": "wordlists/multilingual/es.txt",
+          "title": "Spanish (es)",
+          "description": "Core override/jailbreak patterns in Spanish.",
+          "class": "prose"
+        },
+        {
+          "path": "wordlists/multilingual/fr.txt",
+          "title": "French (fr)",
+          "description": "Core override/jailbreak patterns in French.",
+          "class": "prose"
+        },
+        {
+          "path": "wordlists/multilingual/de.txt",
+          "title": "German (de)",
+          "description": "Core override/jailbreak patterns in German.",
+          "class": "prose"
+        },
+        {
+          "path": "wordlists/multilingual/pt.txt",
+          "title": "Portuguese (pt)",
+          "description": "Core override/jailbreak patterns in Portuguese.",
+          "class": "prose"
+        },
+        {
+          "path": "wordlists/multilingual/it.txt",
+          "title": "Italian (it)",
+          "description": "Core override/jailbreak patterns in Italian.",
+          "class": "prose"
+        },
+        {
+          "path": "wordlists/multilingual/ru.txt",
+          "title": "Russian (ru)",
+          "description": "Core override/jailbreak patterns in Russian.",
+          "class": "prose"
+        },
+        {
+          "path": "wordlists/multilingual/zh.txt",
+          "title": "Chinese (zh)",
+          "description": "Core override/jailbreak patterns in Simplified Chinese.",
+          "class": "prose"
+        },
+        {
+          "path": "wordlists/multilingual/ar.txt",
+          "title": "Arabic (ar)",
+          "description": "Core override/jailbreak patterns in Arabic.",
+          "class": "prose"
+        },
+        {
+          "path": "wordlists/multilingual/hi.txt",
+          "title": "Hindi (hi)",
+          "description": "Core override/jailbreak patterns in Hindi.",
+          "class": "prose"
+        },
+        {
+          "path": "wordlists/multilingual/ja.txt",
+          "title": "Japanese (ja)",
+          "description": "Core override/jailbreak patterns in Japanese.",
+          "class": "prose"
+        }
       ]
     },
     {
@@ -136,7 +231,21 @@
         {
           "path": "wordlists/multimodal/image-and-file-injection.txt",
           "title": "Image & file injection",
-          "description": "Instructions hidden in non-text channels (image text, alt-text, metadata, document layers) read by multimodal pipelines."
+          "description": "Instructions hidden in non-text channels (image text, alt-text, metadata, document layers) read by multimodal pipelines.",
+          "class": "prose"
+        }
+      ]
+    },
+    {
+      "id": "output",
+      "title": "Output Handling",
+      "owasp": "LLM05",
+      "files": [
+        {
+          "path": "wordlists/output/markdown-and-html-injection.txt",
+          "title": "Markdown & HTML injection",
+          "description": "Output-channel payloads that break the renderer displaying a model's answer (HTML/Markdown/CSV breakout) — the output side of the trust boundary.",
+          "class": "structural"
         }
       ]
     },
@@ -148,32 +257,44 @@
         {
           "path": "wordlists/tokens/anomalous-tokens.txt",
           "title": "Anomalous / glitch tokens",
-          "description": "Publicly-known glitch tokens for tokenizer/model robustness testing."
+          "description": "Publicly-known glitch tokens for tokenizer/model robustness testing.",
+          "class": "structural"
         },
         {
           "path": "wordlists/tokens/control-and-artifact.txt",
           "title": "Control characters & encoding artifacts",
-          "description": "Control characters, zero-width/bidi, and BPE residue strings known to trigger anomalous model behavior."
+          "description": "Control characters, zero-width/bidi, and BPE residue strings known to trigger anomalous model behavior.",
+          "class": "notation"
         },
         {
           "path": "wordlists/tokens/fragmentation/base-words.txt",
           "title": "Fragmentation base words",
-          "description": "Seed words the cross-tokenizer probe fragments to measure how tokenizers segment the variants."
+          "description": "Seed words the cross-tokenizer probe fragments to measure how tokenizers segment the variants.",
+          "scan": false,
+          "class": "notation"
         },
         {
           "path": "wordlists/tokens/boundary/separators.txt",
           "title": "Boundary separators",
-          "description": "Real, exotic, and invisible separator codepoints that shift apparent token boundaries."
+          "description": "Real, exotic, and invisible separator codepoints that shift apparent token boundaries.",
+          "scan": false,
+          "class": "notation"
         },
         {
           "path": "wordlists/tokens/unicode-confusables.txt",
           "title": "Unicode confusables",
-          "description": "Confusable character pair table (UTS-39) and confusable-substituted attack keywords for homoglyph filter-bypass testing."
+          "description": "Confusable character pair table (UTS-39) and confusable-substituted attack keywords for homoglyph filter-bypass testing.",
+          "scan": false,
+          "scan_note": "UTS-39 look-alike test vectors — they fold to ordinary words, so they are test inputs, not scan patterns.",
+          "class": "notation"
         },
         {
           "path": "wordlists/tokens/encoding-chains.txt",
           "title": "Encoding chain patterns",
-          "description": "Catalog of single- and multi-layer encoding chain patterns (leet, base64, rot13, reverse, and combinations) used to evade keyword filters; includes known-residual cases requiring semantic defense."
+          "description": "Catalog of single- and multi-layer encoding chain patterns (leet, base64, rot13, reverse, and combinations) used to evade keyword filters; includes known-residual cases requiring semantic defense.",
+          "scan": false,
+          "scan_note": "encoding-chain names and seed phrases — probe vocabulary, not scan patterns.",
+          "class": "notation"
         }
       ]
     }

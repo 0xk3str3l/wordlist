@@ -59,6 +59,9 @@ include = [
     "CHANGELOG.md",
     "CONTRIBUTING.md",
     "SECURITY.md",
+    "ROADMAP.md",
     "examples/",
     "scripts/",
+    "tests/",
+    "bench/",
 ]

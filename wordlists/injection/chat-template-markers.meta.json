@@ -1,0 +1,59 @@
+{
+  "schema": "promptwl.meta/1",
+  "note": "Per-marker annotations for wordlists/injection/chat-template-markers.txt. 'family' says which deployed chat template ships the marker; 'role' says what role boundary it forges.",
+  "entries": {
+    "<|im_start|>": {"tags": ["chatml", "role-marker", "turn-delimiter"], "owasp": "LLM01"},
+    "<|im_end|>": {"tags": ["chatml", "role-marker", "turn-delimiter"], "owasp": "LLM01"},
+    "<|endoftext|>": {"tags": ["chatml", "gpt", "eos"], "owasp": "LLM01"},
+    "<|system|>": {"tags": ["chatml", "phi3", "glm4", "role-marker"], "owasp": "LLM01"},
+    "<|user|>": {"tags": ["chatml", "phi3", "glm4", "role-marker"], "owasp": "LLM01"},
+    "<|assistant|>": {"tags": ["chatml", "phi3", "glm4", "role-marker"], "owasp": "LLM01"},
+    "<|tool|>": {"tags": ["chatml", "role-marker", "tool-role"], "owasp": "LLM01"},
+    "<|channel|>": {"tags": ["chatml", "gpt-oss", "role-marker"], "owasp": "LLM01"},
+
+    "<|begin_of_text|>": {"tags": ["llama3", "bos"], "owasp": "LLM01"},
+    "<|start_header_id|>": {"tags": ["llama3", "role-marker"], "owasp": "LLM01"},
+    "<|end_header_id|>": {"tags": ["llama3", "role-marker"], "owasp": "LLM01"},
+    "<|eot_id|>": {"tags": ["llama3", "eos"], "owasp": "LLM01"},
+
+    "<s>": {"tags": ["llama2", "mistral", "bos"], "owasp": "LLM01"},
+    "</s>": {"tags": ["llama2", "mistral", "eos"], "owasp": "LLM01"},
+    "<|endofprompt|>": {"tags": ["llama2", "eos"], "owasp": "LLM01"},
+    "[INST]": {"tags": ["llama2", "mistral", "role-marker"], "owasp": "LLM01"},
+    "[/INST]": {"tags": ["llama2", "mistral", "role-marker"], "owasp": "LLM01"},
+    "<<SYS>>": {"tags": ["llama2", "system-block"], "owasp": "LLM01"},
+    "<</SYS>>": {"tags": ["llama2", "system-block"], "owasp": "LLM01"},
+
+    "<start_of_turn>": {"tags": ["gemma", "role-marker"], "owasp": "LLM01"},
+    "<end_of_turn>": {"tags": ["gemma", "role-marker"], "owasp": "LLM01"},
+    "<bos>": {"tags": ["gemma", "bos"], "owasp": "LLM01"},
+    "<eos>": {"tags": ["gemma", "eos"], "owasp": "LLM01"},
+
+    "<|end|>": {"tags": ["phi3", "eos"], "owasp": "LLM01"},
+
+    "<|START_OF_TURN_TOKEN|>": {"tags": ["command-r", "role-marker"], "owasp": "LLM01"},
+    "<|END_OF_TURN_TOKEN|>": {"tags": ["command-r", "role-marker"], "owasp": "LLM01"},
+    "<|USER_TOKEN|>": {"tags": ["command-r", "role-marker"], "owasp": "LLM01"},
+    "<|CHATBOT_TOKEN|>": {"tags": ["command-r", "role-marker"], "owasp": "LLM01"},
+    "<|SYSTEM_TOKEN|>": {"tags": ["command-r", "system-block"], "owasp": "LLM01"},
+
+    "[gMASK]": {"tags": ["glm4", "bos"], "owasp": "LLM01"},
+    "<sop>": {"tags": ["glm4", "system-block"], "owasp": "LLM01"},
+    "<|observation|>": {"tags": ["glm4", "tool-role"], "owasp": "LLM01"},
+
+    "<｜begin▁of▁sentence｜>": {"tags": ["deepseek", "bos", "fullwidth"], "owasp": "LLM01"},
+    "<｜end▁of▁sentence｜>": {"tags": ["deepseek", "eos", "fullwidth"], "owasp": "LLM01"},
+    "<｜Assistant｜>": {"tags": ["deepseek", "role-marker", "fullwidth"], "owasp": "LLM01"},
+
+    "<|object_ref_start|>": {"tags": ["qwen", "structure"], "owasp": "LLM01"},
+    "<|object_ref_end|>": {"tags": ["qwen", "structure"], "owasp": "LLM01"},
+
+    "Human:": {"tags": ["claude2", "plain-text-template", "role-marker"], "owasp": "LLM01"},
+    "Assistant:": {"tags": ["claude2", "plain-text-template", "role-marker"], "owasp": "LLM01"},
+    "### Instruction:": {"tags": ["alpaca", "plain-text-template", "role-marker"], "owasp": "LLM01"},
+    "### Input:": {"tags": ["alpaca", "plain-text-template"], "owasp": "LLM01"},
+    "### Response:": {"tags": ["alpaca", "plain-text-template", "role-marker"], "owasp": "LLM01"},
+    "USER:": {"tags": ["vicuna", "plain-text-template", "role-marker"], "owasp": "LLM01"},
+    "ASSISTANT:": {"tags": ["vicuna", "plain-text-template", "role-marker"], "owasp": "LLM01"}
+  }
+}

@@ -6,8 +6,15 @@ Run it:
     python3 examples/recall_demo.py
 
 Recall = fraction of known-attack phrases the guardrail flags as "block".
-The headline is the gap between English recall and multilingual recall —
-the same filter that looks solid in English quietly collapses elsewhere.
+
+Three numbers matter, and they answer three different questions:
+
+  * **per class** — which *shape* of attack a keyword filter can even see.
+  * **English vs translated** — the same phrasings, two languages: the gap a
+    monolingual filter hides from itself.
+  * **structural classes** — control markers, output payloads and tokenizer
+    artifacts, where a phrase filter is the wrong tool entirely and 0% is not
+    a bug but the point.
 """
 
 import sys
@@ -48,32 +55,44 @@ def main() -> int:
         print(f"{cat:<14}{r:>6.0f}%   {_bar(r)}")
 
     # --- the headline: SAME phrasing, English vs translated ---
-    # The multilingual set is translations of the injection/jailbreak/extraction
-    # phrasings, so compare against exactly those categories — apples to apples.
+    # The multilingual set is a translation of the English prose patterns, so
+    # compare prose against prose — apples to apples.
     core = {"injection", "jailbreak", "extraction"}
-    english = [e for e in entries if e.category in core]
+    english = [e for e in entries if e.category in core and e.klass == "prose"]
     multi = [e for e in entries if e.category == "multilingual"]
     r_en, r_ml = _recall(english), _recall(multi)
 
     print("\n" + "=" * 52)
     print("HEADLINE — same phrasing, English vs translated")
     print("-" * 52)
-    print(f"{'English (injection etc.)':<26}{r_en:>6.0f}%   {_bar(r_en)}")
+    print(f"{'English (prose)':<26}{r_en:>6.0f}%   {_bar(r_en)}")
     print(f"{'The same, translated':<26}{r_ml:>6.0f}%   {_bar(r_ml)}")
     gap = r_en - r_ml
     print(f"\n  → the filter catches ~{r_en:.0f}% of these attacks in English")
     print(f"    and ~{r_ml:.0f}% the moment the attacker switches language.\n")
 
     # --- per language, to show it's not one outlier ---
-    print("multilingual breakdown")
-    print("-" * 52)
     langs = {}
     for e in multi:
         code = Path(e.file).stem  # es, fr, de, ...
         langs.setdefault(code, []).append(e)
+    print("multilingual breakdown")
+    print("-" * 52)
     for code in sorted(langs):
         r = _recall(langs[code])
         print(f"  {code:<6}{r:>6.0f}%   {_bar(r, 18)}")
+
+    # --- structural classes: a phrase filter is the wrong tool here ---
+    structural = [e for e in entries if e.klass == "structural"]
+    r_st = _recall(structural)
+    print("\n" + "=" * 52)
+    print("STRUCTURAL CLASSES — where a phrase filter cannot help")
+    print("-" * 52)
+    print(f"{'structural patterns':<26}{r_st:>6.0f}%   {_bar(r_st)}")
+    print("  (chat-template markers, output payloads, tokenizer artifacts)")
+    print("  → 0% here is not a bug: these are literal markers and payloads.")
+    print("    They need literal matching, output escaping and tokenizer")
+    print("    hygiene — a keyword list was never going to see them.\n")
 
     # --- false-positive rate on benign traffic ---
     benign_path = ROOT / "examples" / "benign.txt"
@@ -85,7 +104,7 @@ def main() -> int:
     fp = sum(1 for t in benign if guardrail(t) == "block")
     fpr = 100 * fp / len(benign) if benign else 0.0
 
-    print("\n" + "=" * 52)
+    print("=" * 52)
     print(f"overall recall : {_recall(entries):.0f}%  ({len(entries)} attack phrases)")
     print(f"false positives: {fpr:.0f}%  ({fp}/{len(benign)} benign requests blocked)")
     print("\nMoral: keyword filters catch the English phrasings they were written")
