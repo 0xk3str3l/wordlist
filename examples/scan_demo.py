@@ -61,6 +61,25 @@ def main() -> int:
     print(f"naive keyword filter : {naive_hits}/{len(CASES)} caught")
     print(f"promptwl.scan()      : {scan_hits}/{len(CASES)} caught")
 
+    # --- carriers: the payload is in the structure, not the words ---------
+    print("\n" + "=" * 64)
+    print("CARRIERS — where the payload hides when there are no words")
+    print("-" * 64)
+    carrier_cases = [
+        ("zero-width bitstream", "ok" + chr(0x200B) * 4),
+        ("variation selector", "ship it" + chr(0xFE0F)),
+        ("hangul filler", "lgtm" + chr(0x3164)),
+        ("braille dots", "note" + chr(0x2800)),
+        ("confusable space", "fine" + chr(0x2000)),
+    ]
+    for label, text in carrier_cases:
+        found = promptwl.carriers(text, strict=True)
+        channels = ", ".join(sorted({c.channel for c in found})) or "none"
+        print(f"  {label:<22}{channels}")
+
+    print("\n  → the text reads as an ordinary message; the carrier is what")
+    print("    carries. Scan for the channel, not for the words.")
+
     # --- false positives on benign traffic --------------------------------
     benign_path = ROOT / "examples" / "benign.txt"
     benign = [
@@ -76,6 +95,7 @@ def main() -> int:
     print("    it was written for — the other four walk past it.")
     print("  • scan() canonicalizes first, so look-alikes, zero-width joiners")
     print("    and fullwidth forms are folded back to the phrase they encode.")
+    print("  • when there are no words to match at all, look for the CARRIER.")
     print("  • a corpus scan is a BASELINE, not a guardrail: it only knows the")
     print("    patterns in the corpus. Pair it with a semantic classifier and")
     print("    measure the false-positive rate on your own traffic. 🦜\n")

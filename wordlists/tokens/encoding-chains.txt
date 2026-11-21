@@ -18,15 +18,29 @@
 # ── Tier 1: single-transform (baseline) ────────────────────────────────────────────────
 leet
 base64
+base32
+base58
+base85
+ascii85
 rot13
 reverse
+punycode
+pig-latin
+zalgo
+upside-down
+braille
+morse
+respell (phonetic)
+emoji-substitution
+spelling-alphabet (custom)
+affix-padding
+letter-shuffle
 caesar (fixed shift, known)
 url-encode
 html-entity
 unicode-escape
 hex-encode
 binary-ascii
-morse
 
 # ── Tier 2: two-transform chains ───────────────────────────────────────────────────────
 # Each of these confounds a decode pass that stops at depth 1.

@@ -1,6 +1,6 @@
 {
   "name": "promptwl",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "A red-team and guardrail wordlist for LLMs. SecLists, but for language models.",
   "license": "MIT",
   "intent": "defensive",
@@ -127,6 +127,24 @@
           "path": "wordlists/evasion/language-switching.txt",
           "title": "Language switching",
           "description": "Cues that a payload is smuggled via translation, code-switching, or a low-resource language.",
+          "class": "prose"
+        },
+        {
+          "path": "wordlists/evasion/steganographic-channels.txt",
+          "title": "Steganographic channels",
+          "description": "Codepoint channels that carry a payload outside the words — variation selectors, Hangul fillers, combining marks, Braille dot patterns, emoji modifiers.",
+          "class": "notation"
+        },
+        {
+          "path": "wordlists/evasion/classifier-evasion-paraphrase.txt",
+          "title": "Classifier-evasion paraphrase",
+          "description": "Requests to reword a payload so an automated classifier — not a human — stops detecting it. Meaning preserved, surface changed.",
+          "class": "prose"
+        },
+        {
+          "path": "wordlists/evasion/token-level-substitution.txt",
+          "title": "Token-level substitution",
+          "description": "Instructions to rewrite text at the token level (phonetic respelling, invented words, emoji letters, affix padding) so it stops matching filters and tokenizers.",
           "class": "prose"
         }
       ]
@@ -295,6 +313,19 @@
           "scan": false,
           "scan_note": "encoding-chain names and seed phrases — probe vocabulary, not scan patterns.",
           "class": "notation"
+        }
+      ]
+    },
+    {
+      "id": "misinformation",
+      "title": "Misinformation & Overconfidence",
+      "owasp": "LLM09",
+      "files": [
+        {
+          "path": "wordlists/misinformation/unknowable-probes.txt",
+          "title": "Unknowable probes",
+          "description": "Questions with no determinate answer, where the failure mode is confident fabrication rather than refusal — plus pressure to answer anyway.",
+          "class": "prose"
         }
       ]
     }

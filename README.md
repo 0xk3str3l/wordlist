@@ -8,8 +8,8 @@
 
 <p align="center">
   <a href="https://owasp.org/www-project-top-10-for-large-language-model-applications/"><img alt="OWASP LLM Top 10" src="https://img.shields.io/badge/OWASP-LLM%20Top%2010-blue"></a>
-  <img alt="phrases" src="https://img.shields.io/badge/phrases-835-e4572e">
-  <img alt="categories" src="https://img.shields.io/badge/categories-9-845d41">
+  <img alt="phrases" src="https://img.shields.io/badge/phrases-929-e4572e">
+  <img alt="categories" src="https://img.shields.io/badge/categories-10-845d41">
   <img alt="languages" src="https://img.shields.io/badge/languages-11-845d41">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-green">
   <img alt="intent" src="https://img.shields.io/badge/intent-defensive-9aa0a6">
@@ -28,7 +28,7 @@ Every pentester `git clone`s [SecLists](https://github.com/danielmiessler/SecLis
 ```python
 import promptwl
 
-for entry in promptwl.load():                 # 835 phrases, with metadata
+for entry in promptwl.load():                 # 929 phrases, with metadata
     verdict = my_guardrail(entry.text)        # your classifier under test
     assert verdict == "block", f"missed: {entry.text!r} ({entry.category})"
 ```
@@ -50,11 +50,12 @@ for entry in promptwl.load():                 # 835 phrases, with metadata
 | `injection/` | LLM01 | Instruction override, delimiter/role-boundary confusion, multi-turn payload splitting, **real chat-template control markers** |
 | `jailbreak/` | LLM01 | Persona overrides, refusal suppression, hypothetical/fictional framing, authority impersonation, **dual-response + divider**, **config-style attribute overrides** |
 | `extraction/` | LLM07 / **LLM02** | System-prompt & config leak probes, training-data / memorization probes, **secret & PII disclosure probes** |
-| `evasion/` | LLM01 | Encoding, homoglyph, spacing, invisible-character, and cross-language obfuscation |
+| `evasion/` | LLM01 | Encoding, homoglyph, spacing, invisible-character and cross-language obfuscation; **steganographic carriers**, **classifier-evasion paraphrase**, **token-level substitution** |
 | `agents/` | LLM01 | **Indirect** injection in docs, tool output, web, email; persistent-memory poisoning; **tool-argument injection** |
 | `multilingual/` | LLM01 | Core override/jailbreak patterns in 10 languages — because English-only filters silently fail |
 | `multimodal/` | LLM01 | Instructions hidden in images, alt-text, file metadata, or document layers read by vision pipelines |
 | `output/` | **LLM05** | **Output-channel payloads** (HTML/Markdown/CSV breakout) — the output side of the trust boundary |
+| `misinformation/` | **LLM09** | **Known-unknown probes** — questions with no determinate answer, where the failure mode is confident fabrication rather than refusal |
 | `tokens/` | — | Anomalous / "glitch" tokens, control characters, and bidi (Trojan Source) artifacts for tokenizer robustness |
 
 Each `.txt` is one phrase per line; lines starting with `#` are metadata/comments (prefix a phrase with `\` to keep a literal leading `#`, e.g. `\#\#\# Instruction:`). Load them however you like — plain `grep`, `cat`, or the zero-dependency Python package.
@@ -73,7 +74,7 @@ pip install promptwl
 import promptwl
 
 promptwl.categories()          # ['injection', 'jailbreak', 'extraction', ...]
-promptwl.stats()               # {'injection': 93, ..., 'total': 835}
+promptwl.stats()               # {'injection': 93, ..., 'total': 929}
 promptwl.classes()             # ['notation', 'prose', 'structural']
 promptwl.phrases("multilingual")  # non-English patterns for one category
 promptwl.phrases(klass="structural")  # literal markers & payloads only
@@ -116,6 +117,32 @@ promptwl.scan()      : 5/5 caught
 ```
 
 `scan()` is a **recall-oriented baseline, not a guardrail**: it knows the patterns in the corpus and nothing else. Pair it with a semantic classifier, and measure the false-positive rate on your own traffic — `examples/scan_demo.py` runs the comparison end to end.
+
+## Find the carrier, not the word
+
+Some payloads have no words to match. They live in the *structure* around the
+text — zero-width joiners, bidi overrides, Unicode Tags, variation selectors,
+Hangul fillers, Braille dot patterns. `promptwl.carriers()` reports which
+channel is in use, so you can decode or strip it:
+
+```python
+import promptwl
+
+for c in promptwl.carriers(untrusted_input):
+    log.warning("carrier %s at %d: %s", c.channel, c.index, c.name)
+
+clean, n = promptwl.strip_invisible(untrusted_input)   # sanitize on ingestion/egress
+```
+
+```text
+zero-width bitstream  zero-width
+variation selector    variation-selector
+hangul filler         hangul-filler
+braille dots          braille-pattern
+confusable space      confusable-space
+```
+
+Channels that render as *nothing* are reported by default; the visible-but-unusual ones (Braille, look-alike spaces, emoji modifiers) need `strict=True`, because legitimate text contains them.
 
 ## Metadata, classes and filters
 

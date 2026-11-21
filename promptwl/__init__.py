@@ -32,10 +32,13 @@ from typing import Dict, Iterator, List, Optional, Sequence, Tuple
 
 from .normalize import (  # noqa: F401  (re-exported for convenience)
     BIDI,
+    CARRIER_CHANNELS,
     CONFUSABLES,
     INVISIBLE,
     TAGS_HI,
     TAGS_LO,
+    Carrier,
+    carriers,
     confusable_fold,
     depunctuate,
     normalize,
@@ -45,7 +48,7 @@ from .normalize import (  # noqa: F401  (re-exported for convenience)
     variants,
 )
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 _PKG_DIR = Path(__file__).resolve().parent
 # pip-installed: wordlists/ is bundled next to __init__.py (force-include in pyproject.toml)

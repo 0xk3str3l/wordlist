@@ -1,0 +1,42 @@
+# category: evasion / steganographic-channels
+# purpose: the *carriers* — codepoint channels that hold a payload somewhere a
+#          reader never looks. The payload is not in the words; it is in the
+#          structure around them, so a keyword filter sees a benign note while
+#          a model (or a human agent reading the raw codepoints) sees the
+#          instruction. This extends F-006 (zero-width + Unicode Tags) with the
+#          other text-side channels: variation selectors, Hangul fillers,
+#          combining marks, Braille dot patterns, emoji modifiers.
+# use: build carrier detectors and ingestion filters. Feed the codepoint ranges
+#      to a sanitizer and assert that the decoded payload is surfaced rather
+#      than silently dropped. promptwl.carriers() implements the detector side.
+# owasp: LLM01
+# source-level: publicly documented steganographic text channels — variation
+#               selector channels, Braille/case/whitespace bit carriers, IDN
+#               (punycode) homograph domains, Unicode Tags smuggling.
+#               Catalog of carriers and ranges — no payloads.
+# defense: detect the carrier, not the word. Scan untrusted text for invisible
+#          and format codepoints *before* it reaches the model; decode and
+#          review anything that carries; sanitize on egress so an agent cannot
+#          smuggle a payload in its own commits, tickets or logs.
+#
+# Channels already catalogued elsewhere (not repeated here):
+#   zero-width + Unicode Tags  -> wordlists/evasion/invisible-characters.txt
+#   bidi overrides             -> wordlists/tokens/control-and-artifact.txt
+#   exotic spaces              -> wordlists/tokens/boundary/separators.txt
+#
+# --- variation selectors: invisible modifiers that can carry 4 bits each ------
+U+FE00..U+FE0F VARIATION SELECTOR 1-16
+U+E0100..U+E01EF VARIATION SELECTOR 17-256
+U+FE0E VARIATION SELECTOR-15 (text presentation)
+U+FE0F VARIATION SELECTOR-16 (emoji presentation)
+# --- Hangul fillers: invisible letters used to pad or to encode ---------------
+U+3164 HANGUL FILLER
+U+115F HANGUL CHOSEONG FILLER
+U+1160 HANGUL JUNGSEONG FILLER
+# --- combining marks: invisible accents that can carry a payload ---------------
+U+034F COMBINING GRAPHEME JOINER
+U+200D ZERO WIDTH JOINER (emoji ZWJ carrier)
+# --- visible-but-unusual carriers (still a channel, still a signal) -----------
+U+2800..U+28FF BRAILLE PATTERNS (6-bit dot carrier)
+U+1F3FB..U+1F3FF EMOJI MODIFIER FITZPATRICK TYPE-1-2 .. TYPE-6
+U+FE00..U+FE0F VARIATION SELECTOR (16-dot shannon-fano style channel)

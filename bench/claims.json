@@ -1,22 +1,23 @@
 {
   "schema": "promptwl.claims/1",
   "claims": {
-    "total_phrases": 835,
-    "unique_phrases": 825,
-    "categories": 9,
-    "files": 37,
+    "total_phrases": 929,
+    "unique_phrases": 919,
+    "categories": 10,
+    "files": 41,
     "translated_languages": 10,
     "languages_incl_english": 11,
     "per_category": {
-      "agents": 59,
-      "evasion": 49,
+      "agents": 63,
+      "evasion": 100,
       "extraction": 56,
       "injection": 93,
       "jailbreak": 137,
+      "misinformation": 25,
       "multilingual": 80,
       "multimodal": 18,
       "output": 24,
-      "tokens": 319
+      "tokens": 333
     }
   }
 }
